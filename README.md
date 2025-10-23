@@ -264,3 +264,65 @@ changed or deleted files.  If none are found, then the steps are skipped.
 on the `bilara-data` texts haven't introduced unwanted changes or deletions.    It uses the `on.schedule` event to 
 trigger the workflow.  This workflow run independently of the `bilara-data` -> `sc-data` workflows.  So failure of this 
 workflow does not affect the ability to create or merge pull requests.
+
+## EPUB Translation Tool
+
+A lightweight tool for turning Bilara JSON data into an EPUB with Chinese translations lives in `tools/epub_translator`.
+
+### Requirements
+
+* Python 3.10+
+* An API key for the [DeepSeek](https://www.deepseek.com/) translation service (set `DEEPSEEK_API_KEY`).
+* Optional: `ebooklib` if you prefer to use it for EPUB packaging. Without it, the tool falls back to a pure Python implementation.
+
+### Installation
+
+Create a virtual environment and install the optional dependencies:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install ebooklib
+```
+
+### 用法（中文）
+
+直接在命令行执行：
+
+```bash
+python -m tools.epub_translator.main /path/to/bilara-data output/book.epub --cache .cache/deepseek.json
+```
+
+参数说明：
+
+* `base_path`：Bilara 数据目录，需包含 `root/`、`translation/`、`comment/` 子文件夹。
+* `output`：生成的 EPUB 输出路径。
+* `--language`：目标语言代码，默认值为 `zh`。
+* `--cache`：翻译缓存 JSON 文件路径，建议放在项目外部便于复用。
+* `--api-key`：DeepSeek API 密钥，留空则读取环境变量 `DEEPSEEK_API_KEY`。
+* `--dry-run`：开启后跳过 API 调用，仅构建数据与 EPUB 结构，便于测试流程。
+* `--max-segments`：仅翻译前 N 个段落，可用于快速验证。
+
+如果希望通过中文界面填写参数，可以加上 `--ui` 选项：
+
+```bash
+python -m tools.epub_translator.main --ui
+```
+
+界面会依次提示：
+
+1. Bilara 数据目录。
+2. 输出 EPUB 路径。
+3. 译文语言、缓存位置、API 密钥等参数，均可直接回车使用默认值。
+
+提示文本及确认信息均为中文，并对常见错误（如路径不存在）做了友好提醒，确保符号显示正确不乱码。
+
+### Testing
+
+```bash
+pytest tests
+```
+
+### DeepSeek API Configuration
+
+The tool authenticates using a bearer token. Set `DEEPSEEK_API_KEY` in your environment or pass `--api-key` on the command line. Requests are automatically rate limited and retried with exponential backoff. Cached responses are keyed by segment and recent context to avoid redundant API calls.
